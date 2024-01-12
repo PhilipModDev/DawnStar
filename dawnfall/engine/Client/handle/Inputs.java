@@ -14,6 +14,7 @@ import com.dawnfall.engine.DawnStar;
 import com.dawnfall.engine.Server.util.Constants;
 
 import java.nio.ByteBuffer;
+import java.security.SecureRandom;
 import java.util.Random;
 import java.util.zip.Deflater;
 
@@ -158,7 +159,7 @@ public class Inputs extends InputAdapter {
         for (int i = 3; i < size; i += 4) {
             pixels.put(i, (byte) 255);
         }
-        final Random random = new Random();
+        final Random random = new SecureRandom();
         PixmapIO.writePNG(Gdx.files.external("OneDrive/Desktop/screenshot"+random.nextInt(100)+".png"),
                 pixmap, Deflater.DEFAULT_COMPRESSION, true);
         pixmap.dispose();
