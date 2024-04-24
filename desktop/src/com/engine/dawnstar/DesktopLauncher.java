@@ -12,6 +12,7 @@ public class DesktopLauncher {
 		config.setWindowIcon("dawnstar.png");
 		//Set the openGL version to gl32.
 		config.setOpenGLEmulation(Lwjgl3ApplicationConfiguration.GLEmulation.GL32,3,2);
+		config.setWindowedMode(1080,720);
 		//Launches the application.
 		new Lwjgl3Application(new DawnStar(), config);
 	}
