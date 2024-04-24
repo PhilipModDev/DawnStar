@@ -1,8 +1,9 @@
-package com.engine.dawnstar;
+package com.engine.dawnstar.utils;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.PerspectiveCamera;
+import com.engine.dawnstar.Constants;
 
 public class CameraUtils {
     private final PerspectiveCamera camera3D;
