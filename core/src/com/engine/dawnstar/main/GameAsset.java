@@ -4,7 +4,10 @@ import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.utils.Disposable;
+
+import java.util.Optional;
 
 public class GameAsset implements Disposable {
 
@@ -21,6 +24,7 @@ public class GameAsset implements Disposable {
     public void loadAssets(boolean block){
         assetManager.load("fonts/main.fnt", BitmapFont.class);
         assetManager.load("badlogic.jpg", Texture.class);
+        assetManager.load("textures/blocks.atlas",TextureAtlas.class);
         if (block) {
             assetManager.finishLoading();
             init();
@@ -31,6 +35,18 @@ public class GameAsset implements Disposable {
         if (!assetManager.isFinished()) return;
         mainFont = assetManager.get("fonts/main.fnt",BitmapFont.class);
         badLogicGames = assetManager.get("badlogic.jpg",Texture.class);
+        atlas = assetManager.get("textures/blocks.atlas",TextureAtlas.class);
+    }
+
+    public Optional<TextureAtlas.AtlasRegion> findRegion(String name){
+        if (atlas == null) return Optional.empty();
+        TextureAtlas.AtlasRegion region = atlas.findRegion(name);
+        return region == null ? Optional.empty() : Optional.of(region);
+    }
+    public Texture getAtlasTexture(){
+        if (atlas == null) return null;
+        TextureRegion region = atlas.findRegion("quad");
+        return region.getTexture();
     }
 
     public BitmapFont getMainFont() {
