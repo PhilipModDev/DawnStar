@@ -5,7 +5,6 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.GL32;
 import com.badlogic.gdx.graphics.VertexAttributes;
 import com.badlogic.gdx.graphics.g2d.Batch;
@@ -24,7 +23,10 @@ import com.badlogic.gdx.graphics.glutils.ShaderProgram;
 import com.badlogic.gdx.utils.Array;
 import com.engine.dawnstar.main.GameAsset;
 import com.engine.dawnstar.main.Quad;
+import com.engine.dawnstar.main.data.Chunk;
 import com.engine.dawnstar.utils.CameraUtils;
+
+import java.util.Arrays;
 
 import static com.badlogic.gdx.Gdx.gl32;
 
@@ -76,6 +78,11 @@ public class DawnStar extends ApplicationAdapter {
 			Quad quad = new Quad(gameAsset.findRegion("quad").get(),0,i,0);
 			quads.add(quad);
 		}
+		Chunk chunk = new Chunk(0,0,0);
+        chunk.setBlock(10,11,13,(byte) 1);
+		chunk.setBlock(10,12,13,(byte) 11);
+		chunk.setBlock(10,12,13,(byte) 12);
+		System.out.println(chunk.getBlock(10,11,13));
 	}
 
 	//Resizes the viewport and the camera.
@@ -119,7 +126,6 @@ public class DawnStar extends ApplicationAdapter {
 		//Draws any ui stuff.
         //batch.draw(img,0,0);
 		batch.end();
-
 	}
 
 	//Dispose resources.
