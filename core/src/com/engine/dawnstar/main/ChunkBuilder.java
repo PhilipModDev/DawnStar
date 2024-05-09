@@ -15,13 +15,11 @@ public class ChunkBuilder {
     public static final int SQUARED_CHUNK = (int) Math.pow(Chunk.SIZE,3) - 1;
     private final TerrainBuilder terrainBuilder;
     private final Blocks blocks = DawnStar.getInstance().blocks;
-    public IntBuffer indicesData;
+    public final IntBuffer indicesData;
 
     public ChunkBuilder() {
         terrainBuilder = new TerrainBuilder(this);
-        generateIndices();
-    }
-    private void generateIndices(){
+
         int maxIndices = 196608 * 6; // 32^3 * 6 * 6
         indicesData = BufferUtils.newIntBuffer(maxIndices);
         int[] indices = new int[maxIndices];
@@ -51,24 +49,26 @@ public class ChunkBuilder {
         return terrainBuilder.create(chunk);
     }
 
+    int width = 0;
+    int height = 0;
     private void checkVoxel(int x, int y, int z, Chunk chunk) {
         if (chunk.getBlock(x, y + 1, z) == 0) {
-            terrainBuilder.addFace(Blocks.BLOCK.get(), x, y, z, Direction.UP.value);
+            terrainBuilder.addFace(Blocks.BLOCK.get(), x, y, z,width,height, Direction.UP.value);
         }
         if (chunk.getBlock(x, y - 1, z) == 0) {
-            terrainBuilder.addFace(Blocks.BLOCK.get(), x, y, z, Direction.DOWN.value);
+            terrainBuilder.addFace(Blocks.BLOCK.get(), x, y, z,width,height, Direction.DOWN.value);
         }
         if (chunk.getBlock(x, y, z + 1) == 0) {
-            terrainBuilder.addFace(Blocks.BLOCK.get(), x, y, z, Direction.NORTH.value);
+            terrainBuilder.addFace(Blocks.BLOCK.get(), x, y, z,width,height, Direction.NORTH.value);
         }
         if (chunk.getBlock(x, y, z - 1) == 0) {
-            terrainBuilder.addFace(Blocks.BLOCK.get(), x, y, z, Direction.SOUTH.value);
+            terrainBuilder.addFace(Blocks.BLOCK.get(), x, y, z,width,height, Direction.SOUTH.value);
         }
         if (chunk.getBlock(x + 1, y, z) == 0) {
-            terrainBuilder.addFace(Blocks.BLOCK.get(), x, y, z, Direction.EAST.value);
+            terrainBuilder.addFace(Blocks.BLOCK.get(), x, y, z,width,height, Direction.EAST.value);
         }
         if (chunk.getBlock(x - 1, y, z) == 0) {
-            terrainBuilder.addFace(Blocks.BLOCK.get(), x, y, z, Direction.WEST.value);
+            terrainBuilder.addFace(Blocks.BLOCK.get(), x, y, z,width,height, Direction.WEST.value);
         }
     }
 }

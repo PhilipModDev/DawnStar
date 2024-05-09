@@ -18,10 +18,7 @@ public class TerrainBuilder extends MeshData {
 
     public TerrainBuilder(ChunkBuilder chunkBuilder){
         this.chunkBuilder = chunkBuilder;
-    }
 
-
-    public void addFace(Block block,int x, int y, int z, int index){
         vertex1.uv.set(0,0);
         vertex2.uv.set(0,1);
         vertex3.uv.set(1,1);
@@ -30,6 +27,10 @@ public class TerrainBuilder extends MeshData {
         vertex2.light = 0.5f;
         vertex3.light = 1f;
         vertex4.light = 0.5f;
+    }
+
+
+    public void addFace(Block block,int x, int y, int z, int index){
 
         if (index == Direction.SOUTH.value){
             vertex1.pos.set(x,y,z);
@@ -66,6 +67,55 @@ public class TerrainBuilder extends MeshData {
             vertex2.pos.set(x + 1,y,z + 1);
             vertex3.pos.set(x,y,z +1);
             vertex4.pos.set(x,y,z );
+        }
+        rect(block.getBlockAsset().top);
+    }
+    public void addFace(Block block,int x, int y, int z,int width, int height, int index){
+
+        if (index == Direction.SOUTH.value){
+            //Set vertices.
+            vertex1.pos.set(x,y,z);
+            //Expand vertices.
+            vertex2.pos.set(x,y + 1 + height,z);
+            vertex3.pos.set(x + 1 + width,y + 1 + height,z);
+            vertex4.pos.set(x + 1 + width,y ,z);
+        }
+        if (index == Direction.NORTH.value){
+            //Expand vertices.
+            vertex1.pos.set(x + 1 + width,y + 1 + height,z + 1);
+            vertex2.pos.set(x,y + 1 + height,z + 1);
+            //Set vertices.
+            vertex3.pos.set(x ,y ,z + 1);
+            //Expand vertices.
+            vertex4.pos.set(x + 1 + width,y ,z + 1);
+        }
+        if (index == Direction.WEST.value){
+            //Set vertices.
+            vertex1.pos.set(x ,y ,z);
+            //Expand vertices.
+            vertex2.pos.set(x ,y ,z + 1 + width);
+            vertex3.pos.set(x  ,y + 1 + height,z + 1 + width);
+            vertex4.pos.set(x ,y + 1 + height ,z );
+        }
+        if (index == Direction.EAST.value){
+            //Expand vertices.
+            vertex1.pos.set(x + 1,y,z);
+            vertex2.pos.set(x + 1,y + 1 + height,z);
+            vertex3.pos.set(x+1,y+1 + height,z+1 + width);
+            vertex4.pos.set(x+1,y,z + 1 + width);
+        }
+        if (index == Direction.UP.value){
+            //Set vertices.
+            vertex1.pos.set(x,y + 1,z);
+            vertex2.pos.set(x,y+1,z + 1 + width);
+            vertex3.pos.set(x + 1 + height,y+1,z + 1 + width);
+            vertex4.pos.set(x+1+ height,y+1,z);
+        }
+        if (index == Direction.DOWN.value){
+            vertex1.pos.set(x,y ,z);
+            vertex2.pos.set(x + 1 + width,y,z);
+            vertex3.pos.set(x + 1 + width,y,z + 1 + height);
+            vertex4.pos.set(x,y,z + 1 + height);
         }
         rect(block.getBlockAsset().top);
     }

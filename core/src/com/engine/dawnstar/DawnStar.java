@@ -153,7 +153,6 @@ public class DawnStar extends ApplicationAdapter {
 				}
 			}
 		}
-		chunk.setBlock(0, 0, 0, (byte) 0);
 		ChunkBuilder chunkBuilder = new ChunkBuilder();
 		chunkMesh = chunkBuilder.create(chunk);
 	}
