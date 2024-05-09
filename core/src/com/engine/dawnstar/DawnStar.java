@@ -3,7 +3,7 @@ package com.engine.dawnstar;
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
-import com.badlogic.gdx.files.FileHandle;
+import com.badlogic.gdx.graphics.Camera;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL32;
 import com.badlogic.gdx.graphics.VertexAttributes;
@@ -19,18 +19,35 @@ import com.badlogic.gdx.graphics.g3d.utils.FirstPersonCameraController;
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
 import com.badlogic.gdx.graphics.glutils.IndexArray;
 import com.badlogic.gdx.graphics.glutils.IndexData;
-import com.badlogic.gdx.graphics.glutils.ShaderProgram;
-import com.badlogic.gdx.utils.Array;
+import com.badlogic.gdx.graphics.profiling.GLProfiler;
+import com.badlogic.gdx.math.GridPoint3;
+import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.utils.BufferUtils;
+import com.badlogic.gdx.utils.IntArray;
+import com.engine.dawnstar.main.ChunkBuilder;
 import com.engine.dawnstar.main.GameAsset;
-import com.engine.dawnstar.main.Quad;
+import com.engine.dawnstar.main.blocks.Blocks;
 import com.engine.dawnstar.main.data.Chunk;
+import com.engine.dawnstar.main.mesh.ChunkMesh;
 import com.engine.dawnstar.utils.CameraUtils;
+import com.engine.dawnstar.utils.ShaderUtils;
+import com.engine.dawnstar.utils.math.Direction;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.config.Configurator;
 
-import java.util.Arrays;
+import java.nio.IntBuffer;
+import java.util.Random;
 
 import static com.badlogic.gdx.Gdx.gl32;
 
 public class DawnStar extends ApplicationAdapter {
+
+	public static final Logger LOGGER = LogManager.getLogger(DawnStar.class);
+	public GLProfiler glProfiler;
+	public Blocks blocks;
 	private SpriteBatch batch;
 	private BitmapFont font;
 	private FirstPersonCameraController controller;
@@ -39,19 +56,26 @@ public class DawnStar extends ApplicationAdapter {
 	private ModelBatch modelBatch;
 	private ModelInstance modelInstance;
 	private ModelBuilder modelBuilder;
-	public ShaderProgram shaderProgram;
-	public IndexData indexData;
+	public ShaderUtils shaderUtils;
+
 	private static DawnStar dawnStar;
-	private Array<Quad> quads;
+	private ChunkMesh chunkMesh;
 
 	public DawnStar(){
 		dawnStar = this;
+		Configurator.setRootLevel(Level.ALL);
 	}
 	
 	@Override
 	public void create () {
+		glProfiler = new GLProfiler(Gdx.graphics);
+		glProfiler.enable();
+		//Loads all assets.
 		gameAsset = new GameAsset();
 		gameAsset.loadAssets(true);
+
+		blocks = new Blocks();
+		blocks.registerBlocks();
 		//Creates a new camera.
 		cameraUtils = new CameraUtils();
 		controller = new FirstPersonCameraController(cameraUtils.getCamera3D());
@@ -62,27 +86,15 @@ public class DawnStar extends ApplicationAdapter {
 
 		modelBatch = new ModelBatch();
 		modelBuilder = new ModelBuilder();
-		Material material = new Material(new ColorAttribute(ColorAttribute.Diffuse,Color.DARK_GRAY));
+		Material material = new Material(new ColorAttribute(ColorAttribute.Diffuse,Color.WHITE));
+
 		int attributes = VertexAttributes.Usage.Position | VertexAttributes.Usage.ColorPacked;
-		Model model = modelBuilder.createLineGrid(4096,4096,1,1,material,attributes);
+		Model model = modelBuilder.createXYZCoordinates(10,material,attributes);
 		modelInstance = new ModelInstance(model);
-		buildIndices();
 
-		FileHandle vertex = Gdx.files.internal("shaders/vertex.glsl");
-		FileHandle fragment = Gdx.files.internal("shaders/fragment.glsl");
+		shaderUtils = new ShaderUtils(cameraUtils);
 
-		shaderProgram = new ShaderProgram(vertex,fragment);
-		quads = new Array<>();
-
-		for (int i = 0; i < 1000; i++) {
-			Quad quad = new Quad(gameAsset.findRegion("quad").get(),0,i,0);
-			quads.add(quad);
-		}
-		Chunk chunk = new Chunk(0,0,0);
-        chunk.setBlock(10,11,13,(byte) 1);
-		chunk.setBlock(10,12,13,(byte) 11);
-		chunk.setBlock(10,12,13,(byte) 12);
-		System.out.println(chunk.getBlock(10,11,13));
+		buildChunk();
 	}
 
 	//Resizes the viewport and the camera.
@@ -94,10 +106,15 @@ public class DawnStar extends ApplicationAdapter {
 
 	@Override
 	public void render () {
+		glProfiler.reset();
+
 		//Updates input and camera.
 		toggleFullScreenMode();
 		cameraUtils.update();
 		controller.update();
+
+		//Just For debugging purposes.
+		if (Gdx.input.isKeyJustPressed(Input.Keys.R)) buildChunk();
         //Calls OpenGL.
 		gl32.glClear(GL32.GL_COLOR_BUFFER_BIT | GL32.GL_DEPTH_BUFFER_BIT);
 		gl32.glClearColor(0.65f, 0.81f, 0.90f, 1.0f);
@@ -108,16 +125,13 @@ public class DawnStar extends ApplicationAdapter {
 
 		//Binds for voxel rendering.
 		gameAsset.getAtlasTexture().bind();
+		shaderUtils.bindTerrain();
 
-		for (int i = 0; i < quads.size; i++) {
-			Quad quad = quads.get(i);
-			quad.render(cameraUtils.getCamera3D());
-		}
+	    chunkMesh.render();
 
         //Unbinds for voxel rendering.
 		gl32.glDisable(GL32.GL_DEPTH_TEST);
 		gl32.glDisable(GL32.GL_CULL_FACE);
-
 
 		batch.setProjectionMatrix(cameraUtils.getCameraGUI().combined);
 		batch.begin();
@@ -128,15 +142,46 @@ public class DawnStar extends ApplicationAdapter {
 		batch.end();
 	}
 
+
+	private void buildChunk(){
+		Chunk chunk = new Chunk(0,0,0);
+		Random random = new Random();
+		for (int x = 0; x < Chunk.SIZE; x++) {
+			for (int y = 0; y < Chunk.SIZE; y++) {
+				for (int z = 0; z < Chunk.SIZE; z++) {
+				  chunk.setBlock(x, y, z, (byte) 1);
+				}
+			}
+		}
+		chunk.setBlock(0, 0, 0, (byte) 0);
+		ChunkBuilder chunkBuilder = new ChunkBuilder();
+		chunkMesh = chunkBuilder.create(chunk);
+	}
+	public Direction getFacingDirection(){
+		Vector3 direction = cameraUtils.getCamera3D().direction;
+		if (Math.round(direction.y) >= 0.5f) return Direction.UP;
+		if (Math.round(direction.y) <= -0.5f) return Direction.DOWN;
+		if (Math.round(direction.x) >= 0.5f) return Direction.EAST;
+		if (Math.round(direction.x) <= -0.5f) return Direction.WEST;
+		if (Math.round(direction.z) >= 0.5f) return Direction.NORTH;
+		if (Math.round(direction.z) <= -0.5f) return Direction.SOUTH;
+		return null;
+	}
+	public GridPoint3 getPlayPos(){
+		Camera camera = cameraUtils.getCamera3D();
+		int x = MathUtils.floor(camera.position.x);
+		int y = MathUtils.floor(camera.position.y);
+		int z = MathUtils.floor(camera.position.z);
+        return new GridPoint3(x,y,z);
+	}
+
 	//Dispose resources.
 	@Override
 	public void dispose () {
 		batch.dispose();
 		gameAsset.dispose();
 		modelBatch.dispose();
-		quads.spliterator().tryAdvance(Quad::dispose);
-		shaderProgram.dispose();
-		indexData.dispose();
+		shaderUtils.dispose();
 	}
 
     //Renders and displays different colors of fps.
@@ -150,8 +195,12 @@ public class DawnStar extends ApplicationAdapter {
 		//Set green if greater than 45.
 		if (fps > 45) font.setColor(Color.GREEN);
 		//Renders the font at the top left.
-		font.draw(batch,"FPS:" + Gdx.graphics.getFramesPerSecond(),50,
+		font.draw(batch,"FPS:" + Gdx.graphics.getFramesPerSecond() ,50,
 				cameraUtils.getCameraGUI().viewportHeight - 50);
+		font.setColor(Color.WHITE);
+		font.draw(batch,"Draw Calls:" + glProfiler.getDrawCalls() +"\nDirection:"+getFacingDirection() +
+						"\nPosition " + getPlayPos() ,50,
+				cameraUtils.getCameraGUI().viewportHeight - 80);
 	}
 
 	//Sets the display mode to be if full screen or windowed.
@@ -163,21 +212,6 @@ public class DawnStar extends ApplicationAdapter {
 		  }
 		  Gdx.graphics.setFullscreenMode(Gdx.graphics.getDisplayMode());
 	  }
-	}
-
-	private void buildIndices(){
-		int maxIndices = 90000;
-		indexData = new IndexArray(maxIndices);
-		short[] indices = new short[maxIndices];
-		for (int i = 0, v = 0; i < maxIndices; i += 6, v += 4) {
-			indices[i] = (short)v;
-			indices[i+1] = (short)(v+1);
-			indices[i+2] = (short)(v+2);
-			indices[i+3] = (short)(v+2);
-			indices[i+4] = (short)(v+3);
-			indices[i+5] = (short) v;
-		}
-		indexData.setIndices(indices,0,indices.length);
 	}
 
 	public static DawnStar getInstance(){

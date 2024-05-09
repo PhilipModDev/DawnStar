@@ -4,6 +4,7 @@ layout(binding = 0) uniform sampler2D samp;
 
 in vec2 texels;
 in float light;
+
 out vec4 color;
 
 void main(void){

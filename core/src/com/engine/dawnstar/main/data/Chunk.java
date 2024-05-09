@@ -24,6 +24,8 @@ public final class Chunk {
     //Gets the block at the coordinates.
     public byte getBlock(int x, int y, int z){
         if (y < 0 || y >= SIZE) return 0;
+        if (x < 0 || x >= SIZE) return 0;
+        if (z < 0 || z >= SIZE) return 0;
         if (singleChunk == null) {
             singleChunk = new ISingleChunk(localX,localY,localZ);
             return singleChunk.getData();

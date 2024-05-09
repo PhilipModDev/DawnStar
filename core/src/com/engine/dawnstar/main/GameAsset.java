@@ -45,7 +45,7 @@ public class GameAsset implements Disposable {
     }
     public Texture getAtlasTexture(){
         if (atlas == null) return null;
-        TextureRegion region = atlas.findRegion("quad");
+        TextureRegion region = atlas.findRegion("null");
         return region.getTexture();
     }
 

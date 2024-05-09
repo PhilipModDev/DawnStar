@@ -40,7 +40,9 @@ public final class IChunkLayer {
         }
         //If the is not the same and previous is single then set the new data and fill around.
         if (this.block != block && isSingle){
-           data = new byte[Chunk.SIZE * Chunk.SIZE];
+            if (data == null){
+                data = new byte[Chunk.SIZE * Chunk.SIZE];
+            }
            isSingle = false;
            Arrays.fill(data,this.block);
            data[x | z << 5] = block;

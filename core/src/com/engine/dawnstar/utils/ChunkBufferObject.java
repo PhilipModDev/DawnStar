@@ -1,24 +1,18 @@
 package com.engine.dawnstar.utils;
 
-import com.badlogic.gdx.graphics.Camera;
 import com.badlogic.gdx.graphics.GL32;
 import com.badlogic.gdx.graphics.VertexAttribute;
-import com.badlogic.gdx.graphics.glutils.IndexData;
-import com.badlogic.gdx.graphics.glutils.ShaderProgram;
 import com.badlogic.gdx.utils.BufferUtils;
 import com.badlogic.gdx.utils.Disposable;
 import com.badlogic.gdx.utils.FloatArray;
-import com.engine.dawnstar.DawnStar;
 import java.nio.ByteBuffer;
-import java.nio.ShortBuffer;
+import java.nio.IntBuffer;
 
 import static com.badlogic.gdx.Gdx.gl32;
 
-public class VertexBufferObject implements Disposable {
+public class ChunkBufferObject implements Disposable {
     //The single buffer data for the vbo.
     private final ByteBuffer byteBuffer;
-    //Main shader for the voxels.
-    private final ShaderProgram shader = DawnStar.getInstance().shaderProgram;
     //The vao responsible for holding the attributes.
     private final int[] vao = new int[1];
     //Identifiers for ebo and vbo.
@@ -28,15 +22,15 @@ public class VertexBufferObject implements Disposable {
     //flag property for is already bind the attributes.
     private boolean isBind = false;
 
-    public VertexBufferObject(FloatArray array){
+    public ChunkBufferObject(FloatArray array){
         //Creates a new byte buffer for performance with the size of the vertex multiplied by the array size divided by the attributes.
-        byteBuffer = BufferUtils.newUnsafeByteBuffer(Vertex.ATTRIBUTES.vertexSize * (array.size/Vertex.ATTRIBUTES.size()));
+        byteBuffer = BufferUtils.newUnsafeByteBuffer(Vertex.ATTRIBUTES.vertexSize * (array.size/(Vertex.ATTRIBUTES.vertexSize/Float.BYTES)));
         //Copies the data into the buffer.
        BufferUtils.copy(array.items,byteBuffer,array.size,0);
     }
 
     //Only for uploading to the GPU.
-    private void uploadToGPU(IndexData indexData){
+    private void uploadToGPU(IntBuffer indexData){
         isUploadToGPU = true;
         gl32.glGenVertexArrays(vao.length,vao,vao[0]);
         gl32.glBindVertexArray(vao[0]);
@@ -45,16 +39,12 @@ public class VertexBufferObject implements Disposable {
         gl32.glBufferData(GL32.GL_ARRAY_BUFFER,byteBuffer.limit() * Float.BYTES,byteBuffer,GL32.GL_STATIC_DRAW);
         ebo = gl32.glGenBuffer();
         gl32.glBindBuffer(GL32.GL_ELEMENT_ARRAY_BUFFER,ebo);
-        ShortBuffer indicesBuffer = indexData.getBuffer(false);
-        gl32.glBufferData(GL32.GL_ELEMENT_ARRAY_BUFFER,indicesBuffer.limit() * Float.BYTES,indicesBuffer,GL32.GL_STATIC_DRAW);
+        gl32.glBufferData(GL32.GL_ELEMENT_ARRAY_BUFFER,indexData.limit() * Float.BYTES,indexData,GL32.GL_STATIC_DRAW);
     }
 
     //Binds the vbo for rendering and additional checks for uploads to GPU.
-    public void bind(Camera camera, IndexData indexData) {
+    public void bind(IntBuffer indexData) {
         if (!isUploadToGPU) uploadToGPU(indexData);
-
-        shader.bind();
-        shader.setUniformMatrix("combined",camera.combined);
 
         gl32.glBindVertexArray(vao[0]);
         gl32.glBindBuffer(GL32.GL_ARRAY_BUFFER,vbo);
