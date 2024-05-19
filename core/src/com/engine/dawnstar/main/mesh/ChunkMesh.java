@@ -3,16 +3,13 @@ package com.engine.dawnstar.main.mesh;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.GL32;
-import com.badlogic.gdx.graphics.glutils.IndexData;
 import com.badlogic.gdx.graphics.glutils.ShaderProgram;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.Disposable;
 import com.badlogic.gdx.utils.FloatArray;
-import com.badlogic.gdx.utils.IntArray;
 import com.engine.dawnstar.DawnStar;
 import com.engine.dawnstar.main.data.Chunk;
 import com.engine.dawnstar.utils.ChunkBufferObject;
-
 import java.nio.IntBuffer;
 
 import static com.badlogic.gdx.Gdx.gl32;
@@ -28,11 +25,14 @@ public class ChunkMesh implements Disposable {
         this.chunk = chunk;
         this.indexData = indexData;
         chunkBufferObject = new ChunkBufferObject(array);
-        chunkPos.set(chunk.localX,chunk.localY,chunk.localZ);
+        chunkPos.set(chunk.localX * Chunk.SIZE,chunk.localY* Chunk.SIZE,chunk.localZ* Chunk.SIZE);
     }
+
+
 
     public void render(){
         //Sets the uniform variables for the chunk before rendering.
+
         voxelShader.setUniformf("chunkPos",chunkPos);
         chunkBufferObject.bind(indexData);
 
@@ -49,6 +49,7 @@ public class ChunkMesh implements Disposable {
 
     @Override
     public void dispose() {
+        indexData.clear();
         chunkBufferObject.dispose();
     }
 }

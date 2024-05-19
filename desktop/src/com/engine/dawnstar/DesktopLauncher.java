@@ -8,7 +8,7 @@ public class DesktopLauncher {
 	public static void main (String[] arg) {
 		Lwjgl3ApplicationConfiguration config = new Lwjgl3ApplicationConfiguration();
 		config.setForegroundFPS(100);
-		config.setIdleFPS(70);
+		config.setIdleFPS(100);
 		config.setTitle("DawnStar");
 		config.setWindowIcon("dawnstar.png");
 		//Set the openGL version to gl32.

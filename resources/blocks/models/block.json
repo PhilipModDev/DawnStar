@@ -1,0 +1,6 @@
+{
+  "model" : "cube",
+  "textures" : {
+    "top" : "all/block"
+  }
+}

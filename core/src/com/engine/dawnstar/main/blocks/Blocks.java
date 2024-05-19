@@ -1,5 +1,6 @@
 package com.engine.dawnstar.main.blocks;
 
+import com.engine.dawnstar.main.mesh.Cube;
 import com.engine.dawnstar.utils.Registry;
 import java.util.ArrayList;
 
@@ -15,25 +16,36 @@ public final class Blocks {
     public static final Registry<Block> BLOCK = Registry.create(() -> new Block("block",5,true));
     //List of registered blocks.
     private final ArrayList<Block> allRegisteredBlocks;
+    private final Cube cube;
 
     public Blocks(){
+        cube = new Cube();
         allRegisteredBlocks = new ArrayList<>();
     }
     //The load method for loading all blocks.
-    public void registerBlocks(){
-        LOGGER.debug("Loading Registered Blocks.");
+    public void registerBlocks() {
+        LOGGER.info("Loading Registered Blocks.");
         allRegisteredBlocks.add(AIR.get());
         allRegisteredBlocks.add(STONE.get());
         allRegisteredBlocks.add(GRASS.get());
         allRegisteredBlocks.add(DIRT.get());
         allRegisteredBlocks.add(WATER.get());
         allRegisteredBlocks.add(BLOCK.get());
-        LOGGER.debug("Loading Registered Blocks Complete.");
+        LOGGER.info("Loading Registered Blocks Complete.");
+        LOGGER.info("Loading Block Models.");
+        allRegisteredBlocks.forEach((block -> {
+            block.loadBlockAsset(new Block.BlockAsset(block.name));
+        }));
+        LOGGER.info("Loading Block Models Complete.");
     }
 
     public Block getBlockById(int id){
         if (id >= allRegisteredBlocks.size())
             throw new RuntimeException("Block could not be found by id:"+ id);
         return allRegisteredBlocks.get(id);
+    }
+
+    public Cube getCube() {
+        return cube;
     }
 }

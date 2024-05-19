@@ -69,10 +69,11 @@ public class ChunkBufferObject implements Disposable {
     @Override
     public void dispose() {
         BufferUtils.disposeUnsafeByteBuffer(byteBuffer);
-        isUploadToGPU = false;
-        isBind = false;
         gl32.glDeleteBuffer(vbo);
         gl32.glDeleteBuffer(ebo);
-        gl32.glBindVertexArray(0);
+        gl32.glDeleteVertexArrays(vao.length, vao, 0);
+        isUploadToGPU = false;
+        isBind = false;
     }
+
 }

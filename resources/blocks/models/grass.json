@@ -1,0 +1,8 @@
+{
+  "model" : "cube",
+  "textures" : {
+    "top" : "grass_top",
+    "bottom" : "grass_bottom",
+    "sides" : "grass_side"
+  }
+}

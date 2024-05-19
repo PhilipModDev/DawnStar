@@ -3,6 +3,9 @@ package com.engine.dawnstar.main.blocks;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.engine.dawnstar.DawnStar;
+import com.engine.dawnstar.main.mesh.Model;
+import com.engine.dawnstar.utils.io.ResourceLocation;
+import java.util.Optional;
 
 public class Block {
     //Defines the block properties.
@@ -33,11 +36,10 @@ public class Block {
         blockState.isVoid = isVoid;
         this.id = id;
         this.name = name;
-        blockAsset = new BlockAsset(name);
     }
 
     //Sets custom asset for the block.
-    public void setBlockAsset(BlockAsset blockAsset){
+    public void loadBlockAsset(BlockAsset blockAsset){
         this.blockAsset = blockAsset;
     }
 
@@ -56,25 +58,39 @@ public class Block {
         public TextureRegion top;
         public TextureRegion bottom;
         public TextureRegion side;
+        public Model model;
         //Gets reference towards the block atlas.
         private final TextureAtlas textureAtlas = DawnStar.getInstance().gameAsset.atlas;
 
-        public BlockAsset(){}
         //Creates a new block asset with the name as the resource identifier.
         public BlockAsset(String name){
-            TextureRegion region = textureAtlas.findRegion(name);
-            top = region != null ? region : textureAtlas.findRegion("null");
-            bottom = top;
-            side = top;
+            ResourceLocation resourceLocation = DawnStar.getInstance().getResourceLocation();
+            Optional<BlockModel> optionalBlockModel = resourceLocation.loadVoxelData(name,Block.class);
+            var blockModel = optionalBlockModel.orElseThrow();
+            if (blockModel.getModel().equals("cube")){
+                Blocks blocks = DawnStar.getInstance().blocks;
+                this.model = blocks.getCube();
+                var blockTexture = blockModel.getBlockTexture();
+                loadTextures(blockTexture);
+            }
         }
 
-        public BlockAsset(String topRegion,String bottomRegion,String sideRegion){
-            this.top = textureAtlas.findRegion(topRegion);
-            if (top == null) top = textureAtlas.findRegion("null");
-            this.bottom = textureAtlas.findRegion(bottomRegion);
-            if (bottom == null) bottom = textureAtlas.findRegion("null");
-            this.side = textureAtlas.findRegion(sideRegion);
-            if (side == null) side = textureAtlas.findRegion("null");
+        private void loadTextures(BlockModel.BlockTexture blockTexture){
+            if (blockTexture.top().contains("air")) return;
+            if (blockTexture.top().contains("all/")){
+                String name = blockTexture.top().substring(blockTexture.top().lastIndexOf("/") + 1);
+                top = textureAtlas.findRegion(name) == null ? textureAtlas.findRegion("null")
+                        : textureAtlas.findRegion(name);
+                bottom = top;
+                side = top;
+                return;
+            }
+            String name = blockTexture.top().substring(blockTexture.top().lastIndexOf("/") + 1);
+            top = textureAtlas.findRegion(name);
+            name = blockTexture.bottom().substring(blockTexture.bottom().lastIndexOf("/") + 1);
+            bottom = textureAtlas.findRegion(name);
+            name = blockTexture.sides().substring(blockTexture.sides().lastIndexOf("/") + 1);
+            side =  textureAtlas.findRegion(name);
         }
     }
 }

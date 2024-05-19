@@ -17,29 +17,30 @@ import com.badlogic.gdx.graphics.g3d.ModelInstance;
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
 import com.badlogic.gdx.graphics.g3d.utils.FirstPersonCameraController;
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
-import com.badlogic.gdx.graphics.glutils.IndexArray;
-import com.badlogic.gdx.graphics.glutils.IndexData;
 import com.badlogic.gdx.graphics.profiling.GLProfiler;
 import com.badlogic.gdx.math.GridPoint3;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector3;
-import com.badlogic.gdx.utils.BufferUtils;
-import com.badlogic.gdx.utils.IntArray;
+import com.badlogic.gdx.utils.Array;
 import com.engine.dawnstar.main.ChunkBuilder;
 import com.engine.dawnstar.main.GameAsset;
 import com.engine.dawnstar.main.blocks.Blocks;
 import com.engine.dawnstar.main.data.Chunk;
+import com.engine.dawnstar.main.data.ChunkPos;
 import com.engine.dawnstar.main.mesh.ChunkMesh;
 import com.engine.dawnstar.utils.CameraUtils;
 import com.engine.dawnstar.utils.ShaderUtils;
+import com.engine.dawnstar.utils.io.ResourceLocation;
 import com.engine.dawnstar.utils.math.Direction;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.config.Configurator;
 
-import java.nio.IntBuffer;
+import java.util.Hashtable;
+import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 
 import static com.badlogic.gdx.Gdx.gl32;
 
@@ -57,11 +58,13 @@ public class DawnStar extends ApplicationAdapter {
 	private ModelInstance modelInstance;
 	private ModelBuilder modelBuilder;
 	public ShaderUtils shaderUtils;
-
 	private static DawnStar dawnStar;
-	private ChunkMesh chunkMesh;
+	private final ResourceLocation resourceLocation;
+	private Hashtable<ChunkPos,Chunk> chunks;
+	private Array<ChunkMesh> chunkMeshes;
 
 	public DawnStar(){
+		resourceLocation= new ResourceLocation();
 		dawnStar = this;
 		Configurator.setRootLevel(Level.ALL);
 	}
@@ -79,6 +82,7 @@ public class DawnStar extends ApplicationAdapter {
 		//Creates a new camera.
 		cameraUtils = new CameraUtils();
 		controller = new FirstPersonCameraController(cameraUtils.getCamera3D());
+		controller.setVelocity(40f);
 		Gdx.input.setInputProcessor(controller);
         //Creates a new font.
 		font = gameAsset.getMainFont();
@@ -94,7 +98,49 @@ public class DawnStar extends ApplicationAdapter {
 
 		shaderUtils = new ShaderUtils(cameraUtils);
 
-		buildChunk();
+		Random random = new Random();
+		chunks = new Hashtable<>();
+		chunkMeshes = new Array<>();
+		ChunkBuilder chunkBuilder = new ChunkBuilder(chunks);
+		for (int x = 0; x < 5; x++) {
+			for (int y = 0; y < 2; y++) {
+				for (int z = 0; z < 5; z++) {
+					Chunk chunk = new Chunk(x ,y ,z );
+					for (int xi = 0; xi < Chunk.SIZE; xi++) {
+						for (int yi = 0; yi < Chunk.SIZE; yi++) {
+							for (int zi = 0; zi < Chunk.SIZE; zi++) {
+								chunk.setBlock(xi, yi, zi, (byte) 1);
+							}
+						}
+					}
+					chunk.setBlock(0, 0, 0, (byte) 0);
+					chunks.put(new ChunkPos(chunk.localX ,chunk.localY ,chunk.localZ),chunk);
+				}
+			}
+		}
+
+		Set<Map.Entry<ChunkPos,Chunk>> entries = chunks.entrySet();
+		entries.forEach((entry) ->{
+			ChunkMesh chunkMesh = chunkBuilder.create(entry.getValue()).orElseThrow();
+			chunkMeshes.add(chunkMesh);
+		});
+	}
+
+	public final Vector3 chunkCenter = new Vector3();
+	//Holds the chunk sizes.
+	private final Vector3 chunkDimensions = new Vector3(Chunk.SIZE,Chunk.SIZE,Chunk.SIZE);
+	public boolean isChunkVisible(Chunk chunk){
+		Camera camera  = cameraUtils.getCamera3D();
+		int chunkHalfDimension = (Chunk.SIZE / 2);
+		chunkCenter.set(
+				(chunk.localX*Chunk.SIZE) + chunkHalfDimension,
+				(chunk.localY*Chunk.SIZE) + chunkHalfDimension,
+				(chunk.localZ*Chunk.SIZE) + chunkHalfDimension
+		);
+		chunkCenter.sub(camera.position).nor();
+		double fov = MathUtils.cos((cameraUtils.getCamera3D().fieldOfView + 15) * MathUtils.degreesToRadians);
+		double dot = camera.direction.dot(chunkCenter);
+		return fov <= dot;
 	}
 
 	//Resizes the viewport and the camera.
@@ -112,9 +158,6 @@ public class DawnStar extends ApplicationAdapter {
 		toggleFullScreenMode();
 		cameraUtils.update();
 		controller.update();
-
-		//Just For debugging purposes.
-		if (Gdx.input.isKeyJustPressed(Input.Keys.R)) buildChunk();
         //Calls OpenGL.
 		gl32.glClear(GL32.GL_COLOR_BUFFER_BIT | GL32.GL_DEPTH_BUFFER_BIT);
 		gl32.glClearColor(0.65f, 0.81f, 0.90f, 1.0f);
@@ -127,7 +170,10 @@ public class DawnStar extends ApplicationAdapter {
 		gameAsset.getAtlasTexture().bind();
 		shaderUtils.bindTerrain();
 
-	    chunkMesh.render();
+		for (int i = 0; i <chunkMeshes.size ; i++) {
+			ChunkMesh chunkMesh = chunkMeshes.get(i);
+            if (isChunkVisible(chunkMesh.chunk)) chunkMesh.render();
+		}
 
         //Unbinds for voxel rendering.
 		gl32.glDisable(GL32.GL_DEPTH_TEST);
@@ -143,19 +189,6 @@ public class DawnStar extends ApplicationAdapter {
 	}
 
 
-	private void buildChunk(){
-		Chunk chunk = new Chunk(0,0,0);
-		Random random = new Random();
-		for (int x = 0; x < Chunk.SIZE; x++) {
-			for (int y = 0; y < Chunk.SIZE; y++) {
-				for (int z = 0; z < Chunk.SIZE; z++) {
-				  chunk.setBlock(x, y, z, (byte) 1);
-				}
-			}
-		}
-		ChunkBuilder chunkBuilder = new ChunkBuilder();
-		chunkMesh = chunkBuilder.create(chunk);
-	}
 	public Direction getFacingDirection(){
 		Vector3 direction = cameraUtils.getCamera3D().direction;
 		if (Math.round(direction.y) >= 0.5f) return Direction.UP;
@@ -177,6 +210,7 @@ public class DawnStar extends ApplicationAdapter {
 	//Dispose resources.
 	@Override
 	public void dispose () {
+		chunkMeshes.forEach((ChunkMesh::dispose));
 		batch.dispose();
 		gameAsset.dispose();
 		modelBatch.dispose();
@@ -215,5 +249,9 @@ public class DawnStar extends ApplicationAdapter {
 
 	public static DawnStar getInstance(){
 		return dawnStar;
+	}
+
+	public ResourceLocation getResourceLocation() {
+		return resourceLocation;
 	}
 }

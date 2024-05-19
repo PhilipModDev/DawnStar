@@ -8,5 +8,6 @@ in float light;
 out vec4 color;
 
 void main(void){
+
     color = texture(samp,texels) * light;
 }

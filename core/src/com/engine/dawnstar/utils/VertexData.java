@@ -7,6 +7,6 @@ public class VertexData {
 
     public final Vector3 pos = new Vector3();
     public final Vector2 uv = new Vector2();
-    public float light;
+    public float light = 1f;
 
 }

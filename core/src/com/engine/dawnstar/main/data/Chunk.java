@@ -63,7 +63,7 @@ public final class Chunk {
         }
 
         IChunkLayer chunkLayer = chunkLayers[y];
-        if (chunkLayer == null) chunkLayers[y] = new IChunkLayer(y);
+        if (chunkLayer == null) chunkLayers[y] = new IChunkLayer(y,singleChunk.getData());
         chunkLayers[y].setData(x, z, block);
     }
 }
