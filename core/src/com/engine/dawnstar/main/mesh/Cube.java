@@ -63,12 +63,12 @@ public class Cube extends Model {
     @Override
     public VertexData getVertex(int index) {
         if (index > 3 || index < 0) throw new IndexOutOfBoundsException("Can't get vertex data.");
-        switch (index) {
-          case 0 : return cubuFace.vertex1;
-          case 1 : return cubuFace.vertex2;
-          case 2 : return cubuFace.vertex3;
-          default: return cubuFace.vertex4;
-      }
+        return switch (index) {
+            case 0 -> cubuFace.vertex1;
+            case 1 -> cubuFace.vertex2;
+            case 2 -> cubuFace.vertex3;
+            default -> cubuFace.vertex4;
+        };
     }
 
     public final static class VoxelFace {

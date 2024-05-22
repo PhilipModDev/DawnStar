@@ -1,5 +1,6 @@
 package com.engine.dawnstar.main.data;
 
+
 public final class Chunk {
     //Chunk size.
     public static final int SIZE = 32;
@@ -21,6 +22,21 @@ public final class Chunk {
         this.localZ = localZ;
     }
 
+    public Chunk(int localX, int localY, int localZ,ISingleChunk singleChunk){
+        this.localX = localX;
+        this.localY = localY;
+        this.localZ = localZ;
+        this.singleChunk = singleChunk;
+    }
+
+    public Chunk(int localX, int localY, int localZ,IChunkLayer[] chunkLayers){
+        this.localX = localX;
+        this.localY = localY;
+        this.localZ = localZ;
+        singleChunk = new ISingleChunk(localX,localY,localZ);
+        singleChunk.isSingle = false;
+        this.chunkLayers = chunkLayers;
+    }
     //Gets the block at the coordinates.
     public byte getBlock(int x, int y, int z){
         if (y < 0 || y >= SIZE) return 0;
@@ -33,6 +49,7 @@ public final class Chunk {
         if (singleChunk.isSingle){
             return singleChunk.getData();
         }
+
         IChunkLayer chunkLayer = chunkLayers[y];
         if (chunkLayer == null) {
             chunkLayers[y] = new IChunkLayer(y,singleChunk.getData());
@@ -52,6 +69,7 @@ public final class Chunk {
             singleChunk.isSingle = false;
             chunkLayers = new IChunkLayer[SIZE];
             IChunkLayer chunkLayer = chunkLayers[y];
+
             if (chunkLayer == null) chunkLayers[y] = new IChunkLayer(y,singleChunk.getData());
             chunkLayers[y].setData(x, z, block);
             return;
@@ -65,5 +83,22 @@ public final class Chunk {
         IChunkLayer chunkLayer = chunkLayers[y];
         if (chunkLayer == null) chunkLayers[y] = new IChunkLayer(y,singleChunk.getData());
         chunkLayers[y].setData(x, z, block);
+    }
+
+    @Override
+    public String toString() {
+        return "Chunk{" +
+                "localX=" + localX +
+                ", localY=" + localY +
+                ", localZ=" + localZ +
+                '}';
+    }
+
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Chunk chunk)) return false;
+        return localX == chunk.localX && localY == chunk.localY && localZ == chunk.localZ;
     }
 }

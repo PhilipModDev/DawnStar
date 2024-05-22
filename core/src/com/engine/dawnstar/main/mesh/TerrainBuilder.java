@@ -1,6 +1,6 @@
 package com.engine.dawnstar.main.mesh;
 
-import com.engine.dawnstar.DawnStar;
+import com.engine.dawnstar.client.DawnStarClient;
 import com.engine.dawnstar.main.ChunkBuilder;
 import com.engine.dawnstar.main.blocks.Block;
 import com.engine.dawnstar.main.blocks.Blocks;
@@ -11,7 +11,7 @@ import com.engine.dawnstar.utils.math.Direction;
 
 public class TerrainBuilder extends MeshData {
     private final ChunkBuilder chunkBuilder;
-    private final Blocks blocks = DawnStar.getInstance().blocks;
+    private final Blocks blocks = DawnStarClient.getInstance().blocks;
     private final float lightPower = 0.2f;
 
     public TerrainBuilder(ChunkBuilder chunkBuilder){
@@ -36,7 +36,7 @@ public class TerrainBuilder extends MeshData {
         if (index == 5){
             mapTextureUV(block.getBlockAsset().bottom);
         }
-        quadLighting(x, y, z, index,block,chunk);
+        quadLighting(x + chunk.localX * Chunk.SIZE, y + chunk.localY * Chunk.SIZE, z + chunk.localZ * Chunk.SIZE, index,voxelFace);
         addVertex(voxelFace.vertex1);
         addVertex(voxelFace.vertex2);
         addVertex(voxelFace.vertex3);
@@ -54,163 +54,169 @@ public class TerrainBuilder extends MeshData {
         vertices.add(data.light);
     }
 
-    private void quadLighting(int x, int y, int z,int index,Block block,Chunk chunk){
-        Cube.VoxelFace voxelFace = block.getBlockAsset().model.getVoxelFace(x,y,z,index);
+    private void quadLighting(int x, int y, int z, int index, Cube.VoxelFace voxelFace ){
         voxelFace.vertex1.light = 1f;
         voxelFace.vertex2.light = 1f;
         voxelFace.vertex3.light = 1f;
         voxelFace.vertex4.light = 1f;
+
         if (index == Direction.SOUTH.value){
 
-            if (getBlock(x, y + 1, z - 1, chunk)){
+            if (checkBlockSolid(x, y + 1, z - 1)){
                 voxelFace.vertex2.light = 0.5f; // Top right
                 voxelFace.vertex3.light = 0.5f; // Top left
             }
-            if (getBlock(x, y - 1, z - 1, chunk)){
+            if (checkBlockSolid(x, y - 1, z - 1)){
                 voxelFace.vertex1.light = 0.5f; // Bottom right
                 voxelFace.vertex4.light = 0.5f; // Bottom left
             }
-            if (getBlock(x + 1, y + 1, z - 1, chunk)){
+
+
+            if (checkBlockSolid(x + 1, y + 1, z - 1)){
                 voxelFace.vertex3.light -= lightPower; // Top left
             }
-            if (getBlock(x - 1, y + 1, z - 1, chunk)){
+            if (checkBlockSolid(x - 1, y + 1, z - 1)){
                 voxelFace.vertex2.light -= lightPower; // Top right
             }
-            if (getBlock(x + 1, y - 1, z - 1, chunk)){
+            if (checkBlockSolid(x + 1, y - 1, z - 1)){
                 voxelFace.vertex4.light -= lightPower; // Bottom left
             }
-            if (getBlock(x - 1, y - 1, z - 1, chunk)){
+            if (checkBlockSolid(x - 1, y - 1, z - 1)){
                 voxelFace.vertex1.light -= lightPower; // Bottom right
             }
         }
         if (index == Direction.NORTH.value){
 
-            if (getBlock(x , y - 1, z + 1, chunk)){
+            if (checkBlockSolid(x , y - 1, z + 1)){
                 voxelFace.vertex3.light = 0.5f; // Bottom left
                 voxelFace.vertex4.light = 0.5f; // Bottom right
             }
-            if (getBlock(x , y + 1, z + 1, chunk)){
+            if (checkBlockSolid(x , y + 1, z + 1)){
                 voxelFace.vertex1.light = 0.5f; // Top right
                 voxelFace.vertex2.light = 0.5f; // Top left
             }
-            if (getBlock(x - 1, y + 1, z + 1, chunk)){
+            if (checkBlockSolid(x - 1, y + 1, z + 1)){
                 voxelFace.vertex2.light -= lightPower; // Top left
             }
-            if (getBlock(x + 1, y + 1, z + 1, chunk)){
+            if (checkBlockSolid(x + 1, y + 1, z + 1)){
                 voxelFace.vertex1.light -= lightPower; // Top right
             }
-            if (getBlock(x - 1, y - 1, z + 1, chunk)){
+            if (checkBlockSolid(x - 1, y - 1, z + 1)){
                 voxelFace.vertex3.light -= lightPower; // Bottom left
             }
-            if (getBlock(x + 1, y - 1, z + 1, chunk)){
+            if (checkBlockSolid(x + 1, y - 1, z + 1)){
                 voxelFace.vertex4.light -= lightPower; // Bottom right
             }
         }
         if (index == Direction.WEST.value){
-
-            if (getBlock(x - 1, y - 1, z, chunk)){
+            if (checkBlockSolid(x - 1, y - 1, z)){
                 voxelFace.vertex1.light = 0.5f; // Bottom left
                 voxelFace.vertex2.light = 0.5f; // Bottom right
             }
-            if (getBlock(x - 1, y + 1, z, chunk)){
+            if (checkBlockSolid(x - 1, y + 1, z)){
                 voxelFace.vertex3.light = 0.5f; // Top right
                 voxelFace.vertex4.light = 0.5f; // Top left
             }
 
-            if (getBlock(x - 1, y - 1, z - 1, chunk)){
+            if (checkBlockSolid(x - 1, y - 1, z - 1)){
                 voxelFace.vertex1.light -= lightPower; // Bottom left
             }
-            if (getBlock(x - 1, y - 1, z + 1, chunk)){
+            if (checkBlockSolid(x - 1, y - 1, z + 1)){
                 voxelFace.vertex2.light -= lightPower; // Bottom right
             }
-            if (getBlock(x - 1, y + 1, z - 1, chunk)){
+            if (checkBlockSolid(x - 1, y + 1, z - 1)){
                 voxelFace.vertex4.light -= lightPower; // Top left
             }
-            if (getBlock(x - 1, y + 1, z + 1, chunk)){
+            if (checkBlockSolid(x - 1, y + 1, z + 1)){
                 voxelFace.vertex3.light -= lightPower; // Top right
             }
         }
         if (index == Direction.EAST.value){
 
-            if (getBlock(x + 1, y + 1, z, chunk)){
+            if (checkBlockSolid(x + 1, y + 1, z)){
                 voxelFace.vertex1.light = 0.5f;// right
                 voxelFace.vertex2.light = 0.5f; // left
             }
-            if (getBlock(x + 1, y - 1, z, chunk)){
+            if (checkBlockSolid(x + 1, y - 1, z)){
                 voxelFace.vertex3.light = 0.5f; // left
                 voxelFace.vertex4.light = 0.5f; // right
             }
-            if (getBlock(x + 1, y + 1, z + 1, chunk)){
+            if (checkBlockSolid(x + 1, y + 1, z + 1)){
                 voxelFace.vertex2.light -= lightPower; // left
             }
-            if (getBlock(x + 1, y + 1, z - 1, chunk)){
+            if (checkBlockSolid(x + 1, y + 1, z - 1)){
                 voxelFace.vertex1.light -= lightPower; // right
             }
-            if (getBlock(x + 1, y - 1, z - 1, chunk)){
+            if (checkBlockSolid(x + 1, y - 1, z - 1)){
                 voxelFace.vertex4.light -= lightPower; // right
             }
-            if (getBlock(x + 1, y - 1, z + 1, chunk)){
+            if (checkBlockSolid(x + 1, y - 1, z + 1)){
                 voxelFace.vertex3.light -= lightPower; // left
             }
         }
         if (index == Direction.UP.value){
 
-            if (getBlock(x, y + 1, z - 1, chunk)){
+            if (checkBlockSolid(x, y + 1, z - 1)){
                 voxelFace.vertex1.light = 0.5f;//left
                 voxelFace.vertex4.light = 0.5f;//right
             }
-            if (getBlock(x, y + 1, z + 1, chunk)){
+            if (checkBlockSolid(x, y + 1, z + 1)){
                 voxelFace.vertex3.light = 0.5f; // left
                 voxelFace.vertex2.light = 0.5f; // right
             }
-            if (getBlock(x - 1, y + 1 , z - 1, chunk)){
+            if (checkBlockSolid(x - 1, y + 1 , z - 1)){
                 voxelFace.vertex1.light -= lightPower;//left
             }
-            if (getBlock(x + 1, y + 1 , z - 1, chunk)){
+            if (checkBlockSolid(x + 1, y + 1 , z - 1)){
                 voxelFace.vertex4.light -= lightPower;//left
             }
-            if (getBlock(x - 1, y + 1 , z + 1, chunk)){
+            if (checkBlockSolid(x - 1, y + 1 , z + 1)){
                 voxelFace.vertex2.light -= lightPower; // right
             }
-            if (getBlock(x + 1, y + 1 , z + 1, chunk)){
+            if (checkBlockSolid(x + 1, y + 1 , z + 1)){
                 voxelFace.vertex3.light -= lightPower; // left
             }
 
         }
         if (index == Direction.DOWN.value){
             //East
-            if (getBlock(x + 1, y - 1 , z, chunk)) {
+            if (checkBlockSolid(x + 1, y - 1 , z)) {
                 voxelFace.vertex1.light = 0.5f; //left
                 voxelFace.vertex2.light = 0.5f; //right
             }
             //West
-            if (getBlock(x - 1, y - 1 , z, chunk)) {
+            if (checkBlockSolid(x - 1, y - 1 , z)) {
                 voxelFace.vertex3.light = 0.5f;//right
                 voxelFace.vertex4.light = 0.5f;//left
             }
 
-            if (getBlock(x - 1, y - 1 , z - 1, chunk)) {
+            if (checkBlockSolid(x - 1, y - 1 , z - 1)) {
                 voxelFace.vertex4.light -= lightPower;//left
             }
-            if (getBlock(x - 1, y - 1 , z + 1, chunk)) {
+            if (checkBlockSolid(x - 1, y - 1 , z + 1)) {
                 voxelFace.vertex3.light -= lightPower;//right
             }
-            if (getBlock(x - 1, y - 1 , z - 1, chunk)) {
+            if (checkBlockSolid(x - 1, y - 1 , z - 1)) {
                 voxelFace.vertex1.light -= lightPower;//left
             }
-            if (getBlock(x - 1, y - 1 , z + 1, chunk)) {
+            if (checkBlockSolid(x - 1, y - 1 , z + 1)) {
                 voxelFace.vertex2.light -= lightPower;//right
             }
         }
+
     }
 
-    private boolean getBlock(int x,int y, int z, Chunk chunk){
-        return blocks.getBlockById(chunk.getBlock(x , y , z )).getBlockState().isSolid;
+    private boolean checkBlockSolid(int x, int y, int z){
+        byte block = chunkBuilder.getChunkManager().getBlockAt(x, y, z);
+        return blocks.getBlockById(block).getBlockState().isSolid;
     }
 
     public ChunkMesh create(Chunk chunk) {
-        if (vertices.isEmpty())  return null;
+        if (vertices.isEmpty())  {
+            return null;
+        }
         ChunkMesh chunkMesh = new ChunkMesh(vertices,chunkBuilder.indicesData, chunk);
+
         vertices.clear();
         return chunkMesh;
     }

@@ -2,7 +2,7 @@ package com.engine.dawnstar.main.blocks;
 
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
-import com.engine.dawnstar.DawnStar;
+import com.engine.dawnstar.client.DawnStarClient;
 import com.engine.dawnstar.main.mesh.Model;
 import com.engine.dawnstar.utils.io.ResourceLocation;
 import java.util.Optional;
@@ -60,15 +60,15 @@ public class Block {
         public TextureRegion side;
         public Model model;
         //Gets reference towards the block atlas.
-        private final TextureAtlas textureAtlas = DawnStar.getInstance().gameAsset.atlas;
+        private final TextureAtlas textureAtlas = DawnStarClient.getInstance().gameAsset.atlas;
 
         //Creates a new block asset with the name as the resource identifier.
         public BlockAsset(String name){
-            ResourceLocation resourceLocation = DawnStar.getInstance().getResourceLocation();
+            ResourceLocation resourceLocation = DawnStarClient.getInstance().getResourceLocation();
             Optional<BlockModel> optionalBlockModel = resourceLocation.loadVoxelData(name,Block.class);
             var blockModel = optionalBlockModel.orElseThrow();
             if (blockModel.getModel().equals("cube")){
-                Blocks blocks = DawnStar.getInstance().blocks;
+                Blocks blocks = DawnStarClient.getInstance().blocks;
                 this.model = blocks.getCube();
                 var blockTexture = blockModel.getBlockTexture();
                 loadTextures(blockTexture);

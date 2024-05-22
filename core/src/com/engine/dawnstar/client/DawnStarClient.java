@@ -1,12 +1,9 @@
-package com.engine.dawnstar;
+package com.engine.dawnstar.client;
 
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
-import com.badlogic.gdx.graphics.Camera;
-import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.GL32;
-import com.badlogic.gdx.graphics.VertexAttributes;
+import com.badlogic.gdx.graphics.*;
 import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -21,32 +18,36 @@ import com.badlogic.gdx.graphics.profiling.GLProfiler;
 import com.badlogic.gdx.math.GridPoint3;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector3;
-import com.badlogic.gdx.utils.Array;
-import com.engine.dawnstar.main.ChunkBuilder;
 import com.engine.dawnstar.main.GameAsset;
 import com.engine.dawnstar.main.blocks.Blocks;
-import com.engine.dawnstar.main.data.Chunk;
-import com.engine.dawnstar.main.data.ChunkPos;
-import com.engine.dawnstar.main.mesh.ChunkMesh;
+import com.engine.dawnstar.main.data.World;
+import com.engine.dawnstar.server.DawnStarServer;
 import com.engine.dawnstar.utils.CameraUtils;
 import com.engine.dawnstar.utils.ShaderUtils;
 import com.engine.dawnstar.utils.io.ResourceLocation;
 import com.engine.dawnstar.utils.math.Direction;
+import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.nio.NioSocketChannel;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.config.Configurator;
-
-import java.util.Hashtable;
-import java.util.Map;
-import java.util.Random;
-import java.util.Set;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 
 import static com.badlogic.gdx.Gdx.gl32;
 
-public class DawnStar extends ApplicationAdapter {
+public class DawnStarClient extends ApplicationAdapter {
 
-	public static final Logger LOGGER = LogManager.getLogger(DawnStar.class);
+	public static final Logger LOGGER = LogManager.getLogger(DawnStarClient.class);
+	public static final int RENDER_DISTANCE = 20;
+	public static final int LOD_DISTANCE = 20;
+	public DawnStarServer dawnStarServer;
+	public final ClientUser clientUser;
+	public ClientConnection clientConnection;
 	public GLProfiler glProfiler;
 	public Blocks blocks;
 	private SpriteBatch batch;
@@ -58,17 +59,47 @@ public class DawnStar extends ApplicationAdapter {
 	private ModelInstance modelInstance;
 	private ModelBuilder modelBuilder;
 	public ShaderUtils shaderUtils;
-	private static DawnStar dawnStar;
+	private static DawnStarClient dawnStarClient;
 	private final ResourceLocation resourceLocation;
-	private Hashtable<ChunkPos,Chunk> chunks;
-	private Array<ChunkMesh> chunkMeshes;
+	private final GridPoint3 playerPos = new GridPoint3();
+	private final GridPoint3 playerChunkPos = new GridPoint3();
+	private ChunkRender chunkRender;
 
-	public DawnStar(){
-		resourceLocation= new ResourceLocation();
-		dawnStar = this;
-		Configurator.setRootLevel(Level.ALL);
+	public DawnStarClient(){
+		resourceLocation = new ResourceLocation();
+		clientUser = new ClientUser("PhilipModDev");
+		dawnStarClient = this;
+		Configurator.setRootLevel(Level.INFO);
 	}
-	
+
+	private static void localConnection(){
+		dawnStarClient.clientConnection = new ClientConnection();
+		Thread client = new Thread(() ->{
+			EventLoopGroup threads = new NioEventLoopGroup(run -> {
+				Thread thread = new Thread(run);
+				thread.setDaemon(true);
+				thread.setName("client-worker");
+				return thread;
+			});
+			Bootstrap clientBoot = new Bootstrap();
+			try {
+				clientBoot.group(threads);
+				clientBoot.channel(NioSocketChannel.class);
+				clientBoot.remoteAddress(new InetSocketAddress(InetAddress.getLocalHost(),3868));
+				clientBoot.handler(dawnStarClient.clientConnection);
+				ChannelFuture future = clientBoot.connect().sync();
+				future.channel().closeFuture().sync();
+			} catch (Exception e) {
+				throw new RuntimeException(e);
+			} finally {
+				threads.shutdownGracefully();
+			}
+		});
+		client.setName("client");
+		client.setDaemon(true);
+		client.start();
+	}
+
 	@Override
 	public void create () {
 		glProfiler = new GLProfiler(Gdx.graphics);
@@ -82,7 +113,7 @@ public class DawnStar extends ApplicationAdapter {
 		//Creates a new camera.
 		cameraUtils = new CameraUtils();
 		controller = new FirstPersonCameraController(cameraUtils.getCamera3D());
-		controller.setVelocity(40f);
+		controller.setVelocity(60f);
 		Gdx.input.setInputProcessor(controller);
         //Creates a new font.
 		font = gameAsset.getMainFont();
@@ -93,55 +124,18 @@ public class DawnStar extends ApplicationAdapter {
 		Material material = new Material(new ColorAttribute(ColorAttribute.Diffuse,Color.WHITE));
 
 		int attributes = VertexAttributes.Usage.Position | VertexAttributes.Usage.ColorPacked;
-		Model model = modelBuilder.createXYZCoordinates(10,material,attributes);
+		Model model = modelBuilder.createXYZCoordinates(32,material,attributes);
 		modelInstance = new ModelInstance(model);
 
 		shaderUtils = new ShaderUtils(cameraUtils);
-
-		Random random = new Random();
-		chunks = new Hashtable<>();
-		chunkMeshes = new Array<>();
-		ChunkBuilder chunkBuilder = new ChunkBuilder(chunks);
-		for (int x = 0; x < 5; x++) {
-			for (int y = 0; y < 2; y++) {
-				for (int z = 0; z < 5; z++) {
-					Chunk chunk = new Chunk(x ,y ,z );
-					for (int xi = 0; xi < Chunk.SIZE; xi++) {
-						for (int yi = 0; yi < Chunk.SIZE; yi++) {
-							for (int zi = 0; zi < Chunk.SIZE; zi++) {
-								chunk.setBlock(xi, yi, zi, (byte) 1);
-							}
-						}
-					}
-					chunk.setBlock(0, 0, 0, (byte) 0);
-					chunks.put(new ChunkPos(chunk.localX ,chunk.localY ,chunk.localZ),chunk);
-				}
-			}
+		chunkRender = new ChunkRender(this);
+		World world = new World();
+		if (world.isDoneLoading()){
+			dawnStarServer = DawnStarServer.create(()-> new DawnStarServer(world));
 		}
-
-		Set<Map.Entry<ChunkPos,Chunk>> entries = chunks.entrySet();
-		entries.forEach((entry) ->{
-			ChunkMesh chunkMesh = chunkBuilder.create(entry.getValue()).orElseThrow();
-			chunkMeshes.add(chunkMesh);
-		});
+		localConnection();
 	}
 
-	public final Vector3 chunkCenter = new Vector3();
-	//Holds the chunk sizes.
-	private final Vector3 chunkDimensions = new Vector3(Chunk.SIZE,Chunk.SIZE,Chunk.SIZE);
-	public boolean isChunkVisible(Chunk chunk){
-		Camera camera  = cameraUtils.getCamera3D();
-		int chunkHalfDimension = (Chunk.SIZE / 2);
-		chunkCenter.set(
-				(chunk.localX*Chunk.SIZE) + chunkHalfDimension,
-				(chunk.localY*Chunk.SIZE) + chunkHalfDimension,
-				(chunk.localZ*Chunk.SIZE) + chunkHalfDimension
-		);
-		chunkCenter.sub(camera.position).nor();
-		double fov = MathUtils.cos((cameraUtils.getCamera3D().fieldOfView + 15) * MathUtils.degreesToRadians);
-		double dot = camera.direction.dot(chunkCenter);
-		return fov <= dot;
-	}
 
 	//Resizes the viewport and the camera.
 	@Override
@@ -158,26 +152,21 @@ public class DawnStar extends ApplicationAdapter {
 		toggleFullScreenMode();
 		cameraUtils.update();
 		controller.update();
+		final Vector3 pos = cameraUtils.getCamera3D().position;
+		playerChunkPos.set(
+				MathUtils.floor(pos.x) >> 4,
+				MathUtils.floor(pos.y) >> 4,
+				MathUtils.floor(pos.z) >> 4
+		);
         //Calls OpenGL.
 		gl32.glClear(GL32.GL_COLOR_BUFFER_BIT | GL32.GL_DEPTH_BUFFER_BIT);
-		gl32.glClearColor(0.65f, 0.81f, 0.90f, 1.0f);
+		gl32.glClearColor(0.5f, 0.5f, 0.55f, 1.0f);
 		//Renders the scene.
 		modelBatch.begin(cameraUtils.getCamera3D());
 		modelBatch.render(modelInstance);
 		modelBatch.end();
 
-		//Binds for voxel rendering.
-		gameAsset.getAtlasTexture().bind();
-		shaderUtils.bindTerrain();
-
-		for (int i = 0; i <chunkMeshes.size ; i++) {
-			ChunkMesh chunkMesh = chunkMeshes.get(i);
-            if (isChunkVisible(chunkMesh.chunk)) chunkMesh.render();
-		}
-
-        //Unbinds for voxel rendering.
-		gl32.glDisable(GL32.GL_DEPTH_TEST);
-		gl32.glDisable(GL32.GL_CULL_FACE);
+		chunkRender.render();
 
 		batch.setProjectionMatrix(cameraUtils.getCameraGUI().combined);
 		batch.begin();
@@ -199,18 +188,22 @@ public class DawnStar extends ApplicationAdapter {
 		if (Math.round(direction.z) <= -0.5f) return Direction.SOUTH;
 		return null;
 	}
-	public GridPoint3 getPlayPos(){
+	public GridPoint3 getPlayerPos(){
 		Camera camera = cameraUtils.getCamera3D();
-		int x = MathUtils.floor(camera.position.x);
-		int y = MathUtils.floor(camera.position.y);
-		int z = MathUtils.floor(camera.position.z);
-        return new GridPoint3(x,y,z);
+		int x = MathUtils.floor(camera.position.x / 0.5f);
+		int y = MathUtils.floor(camera.position.y / 0.5f);
+		int z = MathUtils.floor(camera.position.z / 0.5f);
+        return playerPos.set(x,y,z);
+	}
+
+	public GridPoint3 getPlayerChunkPos(){
+		return playerChunkPos;
 	}
 
 	//Dispose resources.
 	@Override
 	public void dispose () {
-		chunkMeshes.forEach((ChunkMesh::dispose));
+		chunkRender.dispose();
 		batch.dispose();
 		gameAsset.dispose();
 		modelBatch.dispose();
@@ -232,7 +225,7 @@ public class DawnStar extends ApplicationAdapter {
 				cameraUtils.getCameraGUI().viewportHeight - 50);
 		font.setColor(Color.WHITE);
 		font.draw(batch,"Draw Calls:" + glProfiler.getDrawCalls() +"\nDirection:"+getFacingDirection() +
-						"\nPosition " + getPlayPos() ,50,
+						"\nPosition " + getPlayerPos() + "\nPlayer Chunk Position: "+ getPlayerChunkPos() ,50,
 				cameraUtils.getCameraGUI().viewportHeight - 80);
 	}
 
@@ -247,11 +240,15 @@ public class DawnStar extends ApplicationAdapter {
 	  }
 	}
 
-	public static DawnStar getInstance(){
-		return dawnStar;
+	public static DawnStarClient getInstance(){
+		return dawnStarClient;
 	}
 
 	public ResourceLocation getResourceLocation() {
 		return resourceLocation;
+	}
+
+	public ChunkRender getChunkRender() {
+		return chunkRender;
 	}
 }

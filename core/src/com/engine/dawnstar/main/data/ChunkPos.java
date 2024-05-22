@@ -13,6 +13,8 @@ public class ChunkPos {
         this.z = z;
     }
 
+    public ChunkPos() {}
+
     public void set(int x,int y, int z){
         this.x = x;
         this.y = y;
@@ -34,5 +36,14 @@ public class ChunkPos {
     @Override
     public int hashCode() {
         return Objects.hash(x, y, z);
+    }
+
+    @Override
+    public String toString() {
+        return "ChunkPos{" +
+                "x=" + x +
+                ", y=" + y +
+                ", z=" + z +
+                '}';
     }
 }

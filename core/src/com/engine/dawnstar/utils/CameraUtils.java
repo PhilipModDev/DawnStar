@@ -11,7 +11,7 @@ public class CameraUtils {
 
     public CameraUtils() {
         //Initiate default configurations for the cameras.
-        camera3D = new PerspectiveCamera(70, Gdx.graphics.getWidth(),Gdx.graphics.getHeight());
+        camera3D = new PerspectiveCamera(67, Gdx.graphics.getWidth(),Gdx.graphics.getHeight());
         camera3D.near = 0.1f;
         camera3D.far = 1000f;
         camera3D.update();

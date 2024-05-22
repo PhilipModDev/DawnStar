@@ -4,7 +4,7 @@ import com.engine.dawnstar.main.mesh.Cube;
 import com.engine.dawnstar.utils.Registry;
 import java.util.ArrayList;
 
-import static com.engine.dawnstar.DawnStar.LOGGER;
+import static com.engine.dawnstar.client.DawnStarClient.LOGGER;
 
 public final class Blocks {
     //Registers all blocks and textures.
